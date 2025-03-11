@@ -1,0 +1,62 @@
+openapi: "3.1.0"
+info:
+  title: AI Supported SQL Analysis API
+  version: "1.0.0"
+  description: API for analyzing SQL code submissions against solutions
+paths:
+  /api/v1/analyse:
+    post:
+      summary: Analyze SQL submission
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Submission analysis request data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sql_environment
+                - task
+                - solutions
+                - submission
+              properties:
+                sql_environment:
+                  type: string
+                  description: Target SQL environment/dialect
+                task:
+                  type: string
+                  description: Task description or requirements
+                solutions:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of correct SQL solutions
+                submission:
+                  type: array
+                  items:
+                    type: string
+                  description: User's submitted SQL code
+      responses:
+        '200':
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - correct
+                  - feedback
+                properties:
+                  correct:
+                    type: boolean
+                    description: Whether submission is correct
+                  feedback:
+                    type: string
+                    description: Detailed analysis feedback
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
