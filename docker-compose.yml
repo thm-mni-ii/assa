@@ -1,0 +1,24 @@
+services:
+  sql_feedback:
+    build: sql_feedback
+    environment:
+      OPENAI_API_KEY: 54f12b1ce53da6a1e5689c6b615d9c6f01a52fda4670ad3ee7a5a7507aed0483
+      BASE_URL: https://ki6.mni.thm.de:4443/v1
+
+  persistence_proxy:
+    build: persistence_proxy
+    environment:
+      DATABASE_URL: postgresql://postgres:1234@db
+      UPSTREAM_URL: http://sql_feedback:80/api/v1/analyse
+    ports:
+    - 8080:8080
+    depends_on:
+    - db
+    - sql_feedback
+
+  db:
+    image: bitnami/postgresql:latest
+    environment:
+      POSTGRESQL_PASSWORD: 1234 # CHANGE FOR PROD
+    volumes:
+    - ./db:/bitnami/postgresql
