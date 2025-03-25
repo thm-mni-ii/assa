@@ -51,7 +51,7 @@ async fn upstream_proxy(
     mut body: AnalysisRequest,
     state: &AppState,
 ) -> Result<AnalysisResults, anyhow::Error> {
-    body.user_id.take();
+    body.redact();
     let _permit = state.upstream_semaphore.acquire().await?;
     let res = HTTP_CLIENT
         .post(&state.config.upstream_url)

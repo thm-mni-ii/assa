@@ -8,7 +8,15 @@ pub struct AnalysisRequest {
     pub task: String,
     pub solutions: Vec<String>,
     pub submissions: Vec<String>,
+    pub task_id: Option<String>,
     pub user_id: Option<String>,
+}
+
+impl AnalysisRequest {
+    pub fn redact(&mut self) {
+        self.task_id.take();
+        self.user_id.take();
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
