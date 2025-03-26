@@ -2,8 +2,8 @@ services:
   sql_feedback:
     build: sql_feedback
     environment:
-      OPENAI_API_KEY: 54f12b1ce53da6a1e5689c6b615d9c6f01a52fda4670ad3ee7a5a7507aed0483
-      BASE_URL: https://ki6.mni.thm.de:4443/v1
+      OPENAI_API_KEY: 1234
+      BASE_URL: https://llm.example.org/v1
 
   persistence_proxy:
     build: persistence_proxy
