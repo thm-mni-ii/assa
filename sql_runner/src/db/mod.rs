@@ -87,6 +87,7 @@ impl DB {
             self.make_database_readonly(&*root_conn, db_name).await?;
         }
 
+        debug!("Executing query in {db_name}");
         let result_set = self.extract(&*conn, query).await?;
         let database_info = if include_database_info {
             Some(self.get_database_information(&*conn).await?)
@@ -229,10 +230,14 @@ impl DB {
                     row_set.push(SqlValue::Text(str))
                 } else if let Ok(f) = row.try_get::<f64, _>(column.name()) {
                     row_set.push(SqlValue::Float(f))
+                } else if let Ok(f) = row.try_get::<f32, _>(column.name()) {
+                    row_set.push(SqlValue::Float(f.into()))
                 } else if let Ok(i) = row.try_get::<i64, _>(column.name()) {
                     row_set.push(SqlValue::Int(i))
                 } else if let Ok(i) = row.try_get::<i32, _>(column.name()) {
                     row_set.push(SqlValue::Int(i.into()))
+                } else if let Ok(b) = row.try_get::<bool, _>(column.name()) {
+                    row_set.push(SqlValue::Bool(b))
                 } else {
                     return Err(SqlExecutionError::ColumnDecodeError(
                         column.name().to_string(),

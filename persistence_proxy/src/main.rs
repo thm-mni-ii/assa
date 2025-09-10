@@ -3,8 +3,10 @@ mod auth;
 #[allow(unused_imports)]
 mod db;
 mod model;
+mod runner;
 
 use crate::api::*;
+use crate::runner::RunnerInterface;
 use env_logger::Env;
 use log::{LevelFilter, error, info};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
@@ -33,12 +35,14 @@ struct Config {
     upstream_max_concurrent: usize,
     #[serde(default = "get_default_port")]
     port: u16,
+    sql_runner_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 struct AppState {
     db: DatabaseConnection,
     upstream_semaphore: Arc<Semaphore>,
+    runner_interface: Option<Arc<RunnerInterface>>,
     config: Arc<Config>,
 }
 
@@ -68,6 +72,11 @@ async fn run() -> Result<(), anyhow::Error> {
             .with_state(AppState {
                 db,
                 upstream_semaphore: Arc::new(Semaphore::new(config.upstream_max_concurrent)),
+                runner_interface: config.sql_runner_url.as_ref().map(|url| {
+                    Arc::new(RunnerInterface::new(
+                        url.parse().expect("failed to parse SQL_RUNNER_URL"),
+                    ))
+                }),
                 config: Arc::new(config),
             }),
     )

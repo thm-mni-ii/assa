@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, PartialOrd)]
 #[serde(untagged)]
 pub enum SqlValue {
+    Bool(bool),
     Int(i64),
     Float(f64),
     Text(String),

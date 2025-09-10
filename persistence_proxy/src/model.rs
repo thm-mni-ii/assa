@@ -1,5 +1,14 @@
+use crate::runner::ResultSet;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub enum SqlResult {
+    Ok(ResultSet),
+    Error(String),
+}
+
+pub type Results = Vec<Option<SqlResult>>;
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct AnalysisRequest {
@@ -8,8 +17,11 @@ pub struct AnalysisRequest {
     pub task: String,
     pub solutions: Vec<String>,
     pub submissions: Vec<String>,
+    pub solution_results: Option<Results>,
+    pub submission_results: Option<Results>,
     pub task_id: Option<String>,
     pub user_id: Option<String>,
+    pub feedback_language: Option<String>,
 }
 
 impl AnalysisRequest {

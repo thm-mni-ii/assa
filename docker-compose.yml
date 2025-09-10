@@ -10,11 +10,13 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:1234@db
       UPSTREAM_URL: http://sql_feedback:80/api/v1/analyse
+      SQL_RUNNER_URL: http://sql_runner:8080/api/v1/run
     ports:
     - 8080:8080
     depends_on:
     - db
     - sql_feedback
+    - sql_runner
 
   db:
     image: library/postgres:17
