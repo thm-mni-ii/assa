@@ -18,6 +18,14 @@ fn get_default_port() -> u16 {
     8080
 }
 
+fn get_default_max_rows_in_result_set() -> usize {
+    1000
+}
+
+fn get_default_statement_timeout() -> u64 {
+    10000
+}
+
 pub fn hex_to_bytes32<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
 where
     D: Deserializer<'de>,
@@ -44,6 +52,10 @@ struct Config {
     db_host: String,
     #[serde(deserialize_with = "hex_to_bytes32")]
     password_hash_key: [u8; 32],
+    #[serde(default = "get_default_max_rows_in_result_set")]
+    max_rows_in_result_set: usize,
+    #[serde(default = "get_default_statement_timeout")]
+    statement_timeout: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +77,8 @@ async fn run() -> Result<(), anyhow::Error> {
             config.db_username.clone(),
             config.db_password.clone(),
             config.password_hash_key,
+            config.max_rows_in_result_set,
+            config.statement_timeout,
         )
         .await?,
     );

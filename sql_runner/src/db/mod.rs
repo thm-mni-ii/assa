@@ -2,7 +2,7 @@ mod introspect;
 pub mod types;
 
 use crate::db::types::{DatabaseInfo, ResultSet, SqlValue};
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgPoolOptions, PgRow};
@@ -25,6 +25,8 @@ pub struct DB {
     db_host: String,
     db_root_username: String,
     db_root_password: String,
+    max_rows_in_result_set: usize,
+    statement_timeout: u64,
 }
 
 impl DB {
@@ -33,6 +35,8 @@ impl DB {
         db_root_username: String,
         db_root_password: String,
         password_hash_key: [u8; 32],
+        max_rows_in_result_set: usize,
+        statement_timeout: u64,
     ) -> Result<Self, SqlExecutionError> {
         Ok(DB {
             root_connection: PgPoolOptions::new()
@@ -46,6 +50,8 @@ impl DB {
             db_host,
             db_root_username,
             db_root_password,
+            max_rows_in_result_set,
+            statement_timeout,
         })
     }
 
@@ -194,6 +200,10 @@ impl DB {
                         username, password_hash, self.db_host, db
                     ))
                     .await?;
+                pool.execute(
+                    format!("SET statement_timeout to {}", self.statement_timeout).as_str(),
+                )
+                .await?;
                 connections.insert(db.to_string(), Arc::new(pool));
                 connection_option = connections.get(db);
                 connection_option.unwrap()
@@ -209,7 +219,9 @@ impl DB {
         query: &str,
     ) -> Result<ResultSet, SqlExecutionError> {
         let rows = sqlx::query(query)
-            .fetch_all(conn)
+            .fetch(conn)
+            .take(self.max_rows_in_result_set)
+            .try_collect::<Vec<PgRow>>()
             .await
             .map_err(SqlExecutionError::Execute)?;
         let mut cell: OnceCell<ResultSet> = OnceCell::new();
