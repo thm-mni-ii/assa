@@ -72,6 +72,7 @@ async fn run() -> Result<(), anyhow::Error> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(routes::run))
         .routes(routes!(routes::compare_result_set))
+        .routes(routes!(routes::batch_compare_result_sets))
         .split_for_parts();
 
     info!("Starting on port {}", config.port);
