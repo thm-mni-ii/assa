@@ -39,9 +39,11 @@ impl ResultSet {
         self.rows = new_rows;
         self.columns = new_columns;
     }
-}
 
-impl ResultSet {
+    pub fn number_columns(&mut self) {
+        self.columns = (0..self.columns.len()).map(|i| i.to_string()).collect();
+    }
+
     pub fn sort_rows(&mut self) {
         self.rows.sort_by(|a, b| a.partial_cmp(b).unwrap());
     }

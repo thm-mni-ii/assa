@@ -1,12 +1,13 @@
 use crate::AppState;
 use crate::db::types::ResultSet;
-use crate::db::{CompareMode, SqlExecutionError};
+use crate::db::{ColumnNormalisation, RowNormalisation, SqlExecutionError};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use futures::future::join_all;
 use log::error;
 use serde::{Deserialize, Serialize};
+use tokio::sync::OnceCell;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
@@ -78,7 +79,10 @@ pub struct CompareRequest {
     pub environment: String,
     pub solution: String,
     pub submission: String,
-    pub mode: CompareMode,
+    #[serde(default = "get_default_row_normalisation")]
+    row_normalisation: RowNormalisation,
+    #[serde(default = "get_default_column_normalisation")]
+    column_normalisation: ColumnNormalisation,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -99,7 +103,8 @@ pub async fn compare_result_set(
             &body.environment,
             &body.solution,
             &body.submission,
-            body.mode,
+            body.row_normalisation,
+            body.column_normalisation,
         )
         .await
         .map_err(|err| {
@@ -113,16 +118,46 @@ pub async fn compare_result_set(
     }))
 }
 
+fn get_default_row_normalisation() -> RowNormalisation {
+    RowNormalisation::NoNormalization
+}
+
+fn get_default_column_normalisation() -> ColumnNormalisation {
+    ColumnNormalisation::NumberColumnsByOrder
+}
+
+fn get_default_return_result_set() -> bool {
+    false
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct Solution {
+    query: String,
+    #[serde(default = "get_default_row_normalisation")]
+    row_normalisation: RowNormalisation,
+    #[serde(default = "get_default_column_normalisation")]
+    column_normalisation: ColumnNormalisation,
+    #[serde(default = "get_default_return_result_set")]
+    return_result_set: bool,
+}
+
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct BatchCompareRequest {
     pub environment: String,
-    pub solutions: Vec<(String, CompareMode)>,
+    pub solutions: Vec<Solution>,
     pub submission: String,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct SolutionResponse {
+    pub eq: bool,
+    pub result_set: Option<ResultSet>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BatchCompareResponse {
-    pub equal: Vec<bool>,
+    pub solutions: Vec<SolutionResponse>,
+    pub submission_result_set: Option<ResultSet>,
 }
 
 #[utoipa::path(post, path = "/api/v1/batch_compare", request_body = BatchCompareRequest, responses((status = OK, body = BatchCompareResponse), (status = UNPROCESSABLE_ENTITY), (status = INTERNAL_SERVER_ERROR)), description = "Batch compare SQL resulsets")]
@@ -130,20 +165,45 @@ pub async fn batch_compare_result_sets(
     state: State<AppState>,
     body: Json<BatchCompareRequest>,
 ) -> Result<Json<BatchCompareResponse>, GenerateErrorResponse> {
-    let eq = join_all(body.solutions.iter().map(|(solution_ref, mode)| async {
-        state
-            .db
-            .compare(&body.environment, solution_ref, &body.submission, *mode)
-            .await
-            .map_err(|err| {
-                error!("Error while handling compare_result_set request: {err}");
-                err_to_response(err)
-            })
-            .map(|(_, _, eq)| eq)
-    }))
+    let mut submission_result_set: OnceCell<ResultSet> = OnceCell::new();
+    let solutions = join_all(body.solutions.iter().map(
+        |Solution {
+             query,
+             row_normalisation,
+             column_normalisation,
+             return_result_set,
+         }| async {
+            state
+                .db
+                .compare(
+                    &body.environment,
+                    query,
+                    &body.submission,
+                    *row_normalisation,
+                    *column_normalisation,
+                )
+                .await
+                .map_err(|err| {
+                    error!("Error while handling compare_result_set request: {err}");
+                    err_to_response(err)
+                })
+                .inspect(|(a, _, _)| {
+                    if !submission_result_set.initialized() {
+                        let _ = submission_result_set.set(a.clone());
+                    }
+                })
+                .map(|(_, b, eq)| SolutionResponse {
+                    result_set: if *return_result_set { Some(b) } else { None },
+                    eq,
+                })
+        },
+    ))
     .await
     .into_iter()
-    .collect::<Result<Vec<bool>, GenerateErrorResponse>>()?;
+    .collect::<Result<Vec<SolutionResponse>, GenerateErrorResponse>>()?;
 
-    Ok(Json(BatchCompareResponse { equal: eq }))
+    Ok(Json(BatchCompareResponse {
+        solutions,
+        submission_result_set: submission_result_set.take(),
+    }))
 }

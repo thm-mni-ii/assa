@@ -6,6 +6,7 @@ use futures::{StreamExt, TryStreamExt};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgPoolOptions, PgRow};
+use sqlx::types::Decimal;
 use sqlx::{Column, Executor, FromRow, Pool, Postgres, Row};
 use std::cell::OnceCell;
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ pub struct DB {
     db_root_password: String,
     max_rows_in_result_set: usize,
     statement_timeout: u64,
+    create_db_mutex: Mutex<()>,
 }
 
 impl DB {
@@ -52,6 +54,7 @@ impl DB {
             db_root_password,
             max_rows_in_result_set,
             statement_timeout,
+            create_db_mutex: Default::default(),
         })
     }
 
@@ -67,31 +70,14 @@ impl DB {
             blake3::keyed_hash(&self.password_hash_key, environment_hash.as_bytes())
                 .to_hex()
                 .to_string();
-        let db_exists = sqlx::query("SELECT 1 FROM pg_database WHERE datname = $1")
-            .bind(db_name)
-            .fetch_optional(&self.root_connection)
-            .await?
-            .is_some();
+        let db_exists = self.db_exists(db_name).await?;
 
-        if !db_exists {
-            debug!("Creating database {db_name}");
-            self.create_database_and_user(db_name, &password_hash)
-                .await?;
-        }
-
-        let conn = self
-            .get_connection(db_name, db_name, &password_hash)
-            .await?;
-
-        if !db_exists {
-            debug!("Initialising database {db_name}");
-            self.init_environment(&*conn, environment).await?;
-            debug!("Updating permission for database {db_name}");
-            let root_conn = self
-                .get_connection(db_name, &self.db_root_username, &self.db_root_password)
-                .await?;
-            self.make_database_readonly(&*root_conn, db_name).await?;
-        }
+        let conn = if !db_exists {
+            self.create_db(environment, db_name, &password_hash).await?
+        } else {
+            self.get_connection(db_name, db_name, &password_hash)
+                .await?
+        };
 
         debug!("Executing query in {db_name}");
         let result_set = self.extract(&*conn, query).await?;
@@ -103,21 +89,63 @@ impl DB {
         Ok((result_set, database_info))
     }
 
+    async fn db_exists(&self, db_name: &str) -> Result<bool, SqlExecutionError> {
+        Ok(sqlx::query("SELECT 1 FROM pg_database WHERE datname = $1")
+            .bind(db_name)
+            .fetch_optional(&self.root_connection)
+            .await?
+            .is_some())
+    }
+
+    async fn create_db(
+        &self,
+        environment: &str,
+        db_name: &str,
+        password_hash: &str,
+    ) -> Result<Arc<Pool<DatabaseType>>, SqlExecutionError> {
+        let _create_db_lock = self.create_db_mutex.lock().await;
+        let db_exists = self.db_exists(db_name).await?;
+
+        if !db_exists {
+            debug!("Creating database {db_name}");
+            self.create_database_and_user(db_name, password_hash)
+                .await?;
+        }
+
+        let conn = self.get_connection(db_name, db_name, password_hash).await?;
+
+        if !db_exists {
+            debug!("Initialising database {db_name}");
+            self.init_environment(&*conn, environment).await?;
+            debug!("Updating permission for database {db_name}");
+            let root_conn = self
+                .get_connection(db_name, &self.db_root_username, &self.db_root_password)
+                .await?;
+            self.make_database_readonly(&*root_conn, db_name).await?;
+        }
+
+        Ok(conn)
+    }
+
     pub async fn compare(
         &self,
         environment: &str,
         query_a: &str,
         query_b: &str,
-        mode: CompareMode,
+        row_norm: RowNormalisation,
+        col_norm: ColumnNormalisation,
     ) -> Result<(ResultSet, ResultSet, bool), SqlExecutionError> {
         let (mut result_a, _) = self.execute(environment, query_a, false).await?;
         let (mut result_b, _) = self.execute(environment, query_b, false).await?;
 
-        if mode >= CompareMode::NormalizeColumnOrder && mode != CompareMode::NormalizeRowOrder {
+        if col_norm == ColumnNormalisation::NumberColumnsByOrder {
+            result_a.number_columns();
+            result_b.number_columns();
+        } else if col_norm == ColumnNormalisation::SortCloumnsByName {
             result_a.sort_columns();
             result_b.sort_columns();
         }
-        if mode >= CompareMode::NormalizeRowOrder {
+        if row_norm == RowNormalisation::SortRows {
             result_a.sort_rows();
             result_b.sort_rows();
         }
@@ -240,6 +268,10 @@ impl DB {
             for column in row.columns() {
                 if let Ok(str) = row.try_get::<String, _>(column.name()) {
                     row_set.push(SqlValue::Text(str))
+                } else if let Ok(d) = row.try_get::<Decimal, _>(column.name()) {
+                    row_set.push(SqlValue::Float(d.try_into().map_err(|_| {
+                        SqlExecutionError::ColumnDecodeError(column.name().to_string())
+                    })?))
                 } else if let Ok(f) = row.try_get::<f64, _>(column.name()) {
                     row_set.push(SqlValue::Float(f))
                 } else if let Ok(f) = row.try_get::<f32, _>(column.name()) {
@@ -318,9 +350,14 @@ pub enum SqlExecutionError {
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, ToSchema)]
-pub enum CompareMode {
+pub enum RowNormalisation {
     NoNormalization,
-    NormalizeColumnOrder,
-    NormalizeRowOrder,
-    NormalizeAll,
+    SortRows,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, ToSchema)]
+pub enum ColumnNormalisation {
+    NoNormalization,
+    SortCloumnsByName,
+    NumberColumnsByOrder,
 }
