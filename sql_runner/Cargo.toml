@@ -1,0 +1,22 @@
+[package]
+name = "sql_runner"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = { version = "0.8.4", features = ["macros"] }
+tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["postgres", "derive", "runtime-tokio"] }
+anyhow = "1.0.98"
+env_logger = "0.11.8"
+envy = "0.4.2"
+log = "0.4.27"
+utoipa-redoc = { version = "6.0.0", features = ["axum"] }
+serde = "1.0.219"
+utoipa = "5.3.1"
+utoipa-axum = "0.2.0"
+blake3 = "1.8.2"
+serde_json = "1.0.140"
+hex = "0.4.3"
+futures = "0.3.31"
+thiserror = "2.0.12"

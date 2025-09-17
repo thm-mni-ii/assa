@@ -1,6 +1,9 @@
-from typing import List
+from typing import List, Optional, Union, Any
 
 from pydantic import BaseModel, Field
+
+
+Results = List[Optional[Union[str, dict]]]
 
 
 class AnalyzeRequest(BaseModel):
@@ -28,6 +31,31 @@ class AnalyzeRequest(BaseModel):
         ...,
         title="Submission",
         description="User's submitted SQL code.",
+    )
+    solution_results: Optional[Results] = Field(
+        default=None,
+        title="Solution Results",
+        description="Execution results for the solution queries.",
+    )
+    submission_results: Optional[Results] = Field(
+        default=None,
+        title="Submission Results", 
+        description="Execution results for the submitted queries.",
+    )
+    task_id: Optional[str] = Field(
+        default=None,
+        title="Task ID",
+        description="Unique identifier for the task.",
+    )
+    user_id: Optional[str] = Field(
+        default=None,
+        title="User ID",
+        description="Unique identifier for the user.",
+    )
+    feedback_language: Optional[str] = Field(
+        default=None,
+        title="Feedback Language",
+        description="The language the generated feedback is in."
     )
 
 
@@ -71,5 +99,5 @@ class SQLAnalyzerOutput(BaseModel):
         description="A list of reference SQL solutions considered correct for the given task."
     )
     student_feedback: SubmissionFeedback = Field(
-        description="A detailed feedback report, including syntax and semantic analyses, for the student's submission."
+        description="A detailed feedback report, including syntax and semantic analyses, for the student's submission. Must be in the specified language."
     )

@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from fastapi import FastAPI, HTTPException
@@ -30,12 +31,14 @@ async def analyze_sql(request: AnalyzeRequest) -> List[AnalyzeResponse]:
     - **solutions**: Array of correct SQL solutions.
     - **submissions**: Array of user's submitted SQL code.
     - **schema**: Database schema including tables, keys, and other relevant details.
+    - **feedback_language**: The language to give feedback in.
     """
     sql_environment = request.sql_environment
     schema = request.db_schema
     task = request.task
     solutions = request.solutions
     submissions = request.submissions
+    feedback_language = request.feedback_language or 'english'
 
     # Validate submissions
     if not isinstance(submissions, list) or not submissions:
@@ -48,7 +51,16 @@ async def analyze_sql(request: AnalyzeRequest) -> List[AnalyzeResponse]:
 
     for submission in submissions:
         # Create a prompt for feedback generation for the current submission
-        prompt = generate_prompt(sql_environment, schema, task, solutions, submission)
+        prompt = generate_prompt(
+            sql_environment, 
+            schema, 
+            task, 
+            solutions, 
+            submission, 
+            feedback_language,
+            request.solution_results,
+            request.submission_results
+        )
 
         # Prepare chat messages
         user_messages = [{"role": "user", "content": prompt}]
@@ -58,7 +70,7 @@ async def analyze_sql(request: AnalyzeRequest) -> List[AnalyzeResponse]:
         # API call
         try:
             completion = client.beta.chat.completions.parse(
-                model="thm/gemma-3-27b-Q8",
+                model=os.getenv("MODEL") or "thm/gemma-3-27b-Q8",
                 messages=messages,
                 response_format=SQLAnalyzerOutput,
                 temperature=0,

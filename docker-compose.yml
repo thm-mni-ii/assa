@@ -10,15 +10,38 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:1234@db
       UPSTREAM_URL: http://sql_feedback:80/api/v1/analyse
+      SQL_RUNNER_URL: http://sql_runner:8080/api/v1/run
     ports:
     - 8080:8080
     depends_on:
     - db
     - sql_feedback
+    - sql_runner
 
   db:
-    image: bitnami/postgresql:latest
+    image: library/postgres:17
     environment:
-      POSTGRESQL_PASSWORD: 1234 # CHANGE FOR PROD
+      POSTGRES_PASSWORD: 1234 # CHANGE FOR PROD
     volumes:
-    - ./db:/bitnami/postgresql
+    - ./db:/var/lib/postgresql
+
+  sql_runner:
+    build: sql_runner
+    environment:
+      DB_HOST: runner_posgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      PASSWORD_HASH_KEY: 653789d76353cdd769edd04015efb6c8ad28669aa5c4b47af7ce9fe79177be79 # CHANGE FOR PROD
+      RUST_LOG: debug
+    ports:
+     - 8081:8080
+    depends_on:
+      - runner_posgres
+
+  runner_posgres:
+    image: library/postgres:17
+    environment:
+      POSTGRES_PASSWORD: postgres # CHANGE FOR PROD
+    volumes:
+    - ./runner-db:/var/lib/postgresql
+
