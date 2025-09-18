@@ -141,7 +141,7 @@ impl DB {
         if col_norm == ColumnNormalisation::NumberColumnsByOrder {
             result_a.number_columns();
             result_b.number_columns();
-        } else if col_norm == ColumnNormalisation::SortCloumnsByName {
+        } else if col_norm == ColumnNormalisation::SortColumnsByName {
             result_a.sort_columns();
             result_b.sort_columns();
         }
@@ -358,6 +358,6 @@ pub enum RowNormalisation {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, ToSchema)]
 pub enum ColumnNormalisation {
     NoNormalization,
-    SortCloumnsByName,
+    SortColumnsByName,
     NumberColumnsByOrder,
 }
