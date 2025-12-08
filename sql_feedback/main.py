@@ -65,7 +65,6 @@ async def analyze_sql(request: AnalyzeRequest) -> List[AnalyzeResponse]:
         # Prepare chat messages
         user_messages = [{"role": "user", "content": prompt}]
         messages = [{"role": "system", "content": system_prompt}] + user_messages
-        messages.append({"role": "assistant", "content": ""})
 
         # API call
         try:
