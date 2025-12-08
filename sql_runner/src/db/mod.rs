@@ -1,7 +1,7 @@
 mod introspect;
 pub mod types;
 
-use crate::db::types::{DatabaseInfo, ResultSet, SqlValue};
+use crate::db::types::{DatabaseInfo, ResultSet, ResultSetExtension, SqlValue};
 use futures::{StreamExt, TryStreamExt};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};

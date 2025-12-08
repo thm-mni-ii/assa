@@ -1,6 +1,7 @@
 FROM rust:1.85.1-alpine AS build
 RUN apk add --no-cache musl-dev
-COPY . /app
+COPY ./common /common
+COPY ./persistence_proxy /app
 WORKDIR /app
 RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release && cd migration && cargo build --release
 

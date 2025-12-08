@@ -1,24 +1,16 @@
+pub use common::models::{ResultSet, SqlValue};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, PartialOrd)]
-#[serde(untagged)]
-pub enum SqlValue {
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    Text(String),
+pub trait ResultSetExtension {
+    fn sort_columns(&mut self);
+    fn number_columns(&mut self);
+    fn sort_rows(&mut self);
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema, PartialEq, PartialOrd)]
-pub struct ResultSet {
-    pub columns: Vec<String>,
-    pub rows: Vec<Vec<SqlValue>>,
-}
-
-impl ResultSet {
-    pub fn sort_columns(&mut self) {
+impl ResultSetExtension for ResultSet {
+    fn sort_columns(&mut self) {
         let mut indexed_columns = self.columns.iter().enumerate().collect::<Vec<_>>();
         indexed_columns.sort_by(|(_, column_a), (_, column_b)| column_a.cmp(column_b));
         let new_rows = self
@@ -40,11 +32,11 @@ impl ResultSet {
         self.columns = new_columns;
     }
 
-    pub fn number_columns(&mut self) {
+    fn number_columns(&mut self) {
         self.columns = (0..self.columns.len()).map(|i| i.to_string()).collect();
     }
 
-    pub fn sort_rows(&mut self) {
+    fn sort_rows(&mut self) {
         self.rows.sort_by(|a, b| a.partial_cmp(b).unwrap());
     }
 }

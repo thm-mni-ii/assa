@@ -1,14 +1,6 @@
-use crate::runner::ResultSet;
+pub use common::models::{Results, SqlResult};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub enum SqlResult {
-    Ok(ResultSet),
-    Error(String),
-}
-
-pub type Results = Vec<Option<SqlResult>>;
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct AnalysisRequest {

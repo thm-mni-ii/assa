@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8.4", features = ["macros"] }
+common = { path = "../common" }
 tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["postgres", "derive", "runtime-tokio", "rust_decimal"] }
 anyhow = "1.0.98"

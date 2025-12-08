@@ -19,11 +19,11 @@ jobs:
       matrix:
         image:
           - name: sql_feedback
-            context: ./sql_feedback
+            dockerfile: sql_feedback/Dockerfile
           - name: persistence_proxy
-            context: ./persistence_proxy
+            dockerfile: persistence_proxy/Dockerfile
           - name: sql_runner
-            context: ./sql_runner
+            dockerfile: sql_runner/Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

@@ -1,6 +1,6 @@
+pub use common::models::ResultSet;
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub struct RunnerInterface {
@@ -37,21 +37,6 @@ impl RunnerInterface {
 pub struct RunRequest {
     pub environment: String,
     pub query: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-#[serde(untagged)]
-pub enum SqlValue {
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    Text(String),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-pub struct ResultSet {
-    pub columns: Vec<String>,
-    pub rows: Vec<Vec<SqlValue>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

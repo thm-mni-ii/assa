@@ -1,0 +1,6 @@
+Based on the following {{request.sql_environment}} schema, Task and solution please create detailed Feedback. Please create feedback for the student. Please return the feedback in english and word the feedback as a comparison between the solution and submission providing the student with guidance what to do next. Do not compliment the student just return the feedback. Do not mention the solution just talk about the solution. Only return the feedback without preamble or markdown formatting.
+Task: {{request.task}}
+Solution: {{request.solutions[0]}}
+Query: {{request.submissions[0]}}
+Schema:
+{{request.db_schema}}

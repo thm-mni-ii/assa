@@ -1,15 +1,20 @@
 services:
   sql_feedback:
-    build: sql_feedback
+    build:
+      context: .
+      dockerfile: sql_feedback/Dockerfile
     environment:
       OPENAI_API_KEY: 1234
       BASE_URL: https://llm.example.org/v1
+      MODEL: mistralai/Ministral-3-14B-Instruct-2512
 
   persistence_proxy:
-    build: persistence_proxy
+    build:
+      context: .
+      dockerfile: persistence_proxy/Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:1234@db
-      UPSTREAM_URL: http://sql_feedback:80/api/v1/analyse
+      UPSTREAM_URL: http://sql_feedback:8080/api/v1/feedback
       SQL_RUNNER_URL: http://sql_runner:8080/api/v1/run
     ports:
     - 8080:8080
@@ -26,13 +31,15 @@ services:
     - ./db:/var/lib/postgresql
 
   sql_runner:
-    build: sql_runner
+    build:
+      context: .
+      dockerfile: sql_runner/Dockerfile
     environment:
       DB_HOST: runner_posgres
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       PASSWORD_HASH_KEY: 653789d76353cdd769edd04015efb6c8ad28669aa5c4b47af7ce9fe79177be79 # CHANGE FOR PROD
-      RUST_LOG: debug
+      #RUST_LOG: debug
     ports:
      - 8081:8080
     depends_on:
