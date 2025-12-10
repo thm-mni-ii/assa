@@ -9,9 +9,7 @@ use axum::http::StatusCode;
 use futures::future::join_all;
 use log::{error, warn};
 use sea_orm::{ActiveModelTrait, NotSet, Set};
-use std::sync::{Arc, LazyLock};
-
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
+use std::sync::Arc;
 
 #[utoipa::path(post, path = "/api/v1/analyse", request_body = AnalysisRequest, responses((status = OK, body = AnalysisResults), (status = UNAUTHORIZED), (status = BAD_REQUEST), (status = BAD_GATEWAY)), description = "Analyze SQL submission")]
 pub async fn analyse(
@@ -107,7 +105,7 @@ async fn upstream_proxy(
 ) -> Result<AnalysisResults, anyhow::Error> {
     body.redact();
     let _permit = state.upstream_semaphore.acquire().await?;
-    let res = HTTP_CLIENT
+    let res = reqwest::Client::new()
         .post(&state.config.upstream_url)
         .json(&body)
         .send()
