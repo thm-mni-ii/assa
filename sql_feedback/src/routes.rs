@@ -54,6 +54,7 @@ pub async fn generate_feedback(
         .json(&json!({
             "model": config.model,
             "messages": vec![json!({"role": "user", "content": prompt})],
+            "temperature": 0,
         }))
         .send()
         .await
