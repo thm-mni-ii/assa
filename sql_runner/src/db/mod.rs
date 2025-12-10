@@ -282,6 +282,10 @@ impl DB {
                     row_set.push(SqlValue::Int(i.into()))
                 } else if let Ok(b) = row.try_get::<bool, _>(column.name()) {
                     row_set.push(SqlValue::Bool(b))
+                } else if let Ok(c) = row.try_get::<sqlx::types::chrono::NaiveDateTime, _>(column.name()) {
+                    row_set.push(SqlValue::Text(c.to_string()))
+                } else if let Ok(c) = row.try_get::<sqlx::types::chrono::NaiveDate, _>(column.name()) {
+                    row_set.push(SqlValue::Text(c.to_string()))
                 } else {
                     return Err(SqlExecutionError::ColumnDecodeError(
                         column.name().to_string(),

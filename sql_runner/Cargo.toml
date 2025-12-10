@@ -7,7 +7,7 @@ edition = "2024"
 axum = { version = "0.8.4", features = ["macros"] }
 common = { path = "../common" }
 tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
-sqlx = { version = "0.8.6", default-features = false, features = ["postgres", "derive", "runtime-tokio", "rust_decimal"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["postgres", "derive", "runtime-tokio", "rust_decimal", "chrono"] }
 anyhow = "1.0.98"
 env_logger = "0.11.8"
 envy = "0.4.2"
